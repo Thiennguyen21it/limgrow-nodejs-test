@@ -6,67 +6,6 @@ const cache = require("../middleware/cache");
 
 const router = express.Router();
 
-// DEBUG ENDPOINT - Remove this in production
-router.get("/debug", async (req, res) => {
-  try {
-    console.log("🔍 Debug endpoint called");
-
-    // Test basic database connection
-    const totalCount = await Watchface.countDocuments();
-    console.log(`Total documents: ${totalCount}`);
-
-    // Test with isActive filter
-    const activeCount = await Watchface.countDocuments({ isActive: true });
-    console.log(`Active documents: ${activeCount}`);
-
-    // Get all documents without filter
-    const allWatchfaces = await Watchface.find({}).limit(3);
-    console.log(
-      `All watchfaces (first 3):`,
-      allWatchfaces.map((w) => ({
-        id: w._id,
-        name: w.name,
-        isActive: w.isActive,
-      }))
-    );
-
-    // Get with isActive filter
-    const activeWatchfaces = await Watchface.find({ isActive: true }).limit(3);
-    console.log(
-      `Active watchfaces (first 3):`,
-      activeWatchfaces.map((w) => ({
-        id: w._id,
-        name: w.name,
-        isActive: w.isActive,
-      }))
-    );
-
-    res.json({
-      success: true,
-      debug: {
-        totalCount,
-        activeCount,
-        allWatchfaces: allWatchfaces.map((w) => ({
-          id: w._id,
-          name: w.name,
-          isActive: w.isActive,
-        })),
-        activeWatchfaces: activeWatchfaces.map((w) => ({
-          id: w._id,
-          name: w.name,
-          isActive: w.isActive,
-        })),
-      },
-    });
-  } catch (error) {
-    console.error("Debug endpoint error:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
-  }
-});
-
 // Validation middleware
 const validatePagination = [
   query("page")
@@ -145,9 +84,6 @@ router.get(
   cache(300), // Cache for 5 minutes
   async (req, res) => {
     try {
-      console.log("🔍 Main watchfaces endpoint called");
-      console.log("Query parameters:", req.query);
-
       const {
         page = 1,
         limit = 20,
@@ -168,7 +104,6 @@ router.get(
 
       // Build query
       let query = { isActive: true };
-      console.log("Initial query:", query);
 
       if (search) {
         query.$or = [
@@ -182,17 +117,6 @@ router.get(
         query.category = { $regex: category, $options: "i" };
       }
 
-      console.log("Final query:", query);
-      console.log("Pagination:", { skip, itemsPerPage, currentPage });
-
-      // Test basic count first
-      const totalDocuments = await Watchface.countDocuments();
-      const activeDocuments = await Watchface.countDocuments({
-        isActive: true,
-      });
-      console.log(`Total documents in collection: ${totalDocuments}`);
-      console.log(`Active documents in collection: ${activeDocuments}`);
-
       // Execute query with pagination
       const [watchfaces, totalCount] = await Promise.all([
         Watchface.find(query)
@@ -202,17 +126,6 @@ router.get(
           .lean(),
         Watchface.countDocuments(query),
       ]);
-
-      console.log(`Query result: ${watchfaces.length} watchfaces found`);
-      console.log(`Total count for query: ${totalCount}`);
-
-      if (watchfaces.length > 0) {
-        console.log("First watchface:", {
-          id: watchfaces[0]._id,
-          name: watchfaces[0].name,
-          isActive: watchfaces[0].isActive,
-        });
-      }
 
       const metadata = buildResponseMetadata(
         watchfaces,
@@ -227,7 +140,6 @@ router.get(
         meta: metadata,
       });
     } catch (error) {
-      console.error("❌ Error fetching watchfaces:", error);
       logger.error("Error fetching watchfaces:", error);
       res.status(500).json({
         success: false,

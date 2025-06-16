@@ -1,22 +1,27 @@
 {
   "name": "watchface-scraper-api",
   "version": "1.0.0",
-  "description": "Node.js API for scraping and serving watch face data",
+  "description": "Node.js API for scraping and serving Apple Watch face data from watchfacely.com",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
     "scrape": "node src/scraper.js",
     "test": "jest",
-    "test:db": "node test-mongodb.js",
-    "test:scraper": "node test-scraper.js"
+    "test:scraper": "node test/test-scraper.js",
+    "test:improved-scraper": "node test/test-improved-scraper.js",
+    "test:db": "node test/save-scraped-to-db.js",
+    "test:view": "node test/view-scraped-data.js"
   },
   "keywords": [
     "nodejs",
     "api",
     "scraper",
     "watchface",
-    "mongodb"
+    "apple-watch",
+    "mongodb",
+    "express",
+    "puppeteer"
   ],
   "author": "Developer",
   "license": "MIT",

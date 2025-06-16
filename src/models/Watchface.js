@@ -83,6 +83,10 @@ const watchfaceSchema = new mongoose.Schema(
         type: String,
         index: true,
       },
+      faceId: {
+        type: String,
+        index: true,
+      },
     },
   },
   {

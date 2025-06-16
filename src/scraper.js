@@ -124,7 +124,7 @@ class WatchfaceScraper {
                   }
                 }
 
-                // Look for links in the same container
+                // Look for links in the same container that contain face IDs
                 const linkEl =
                   parentContainer.querySelector('a[href*="/face/"]') ||
                   parentContainer.querySelector("a");
@@ -137,7 +137,7 @@ class WatchfaceScraper {
 
                 // Look for author information
                 const authorEl = parentContainer.querySelector(
-                  '[class*="author"], [class*="composer"], [class*="by"]'
+                  '.author_name, [class*="author"], [class*="composer"], [class*="by"]'
                 );
                 if (authorEl) {
                   author = authorEl.textContent
@@ -171,6 +171,19 @@ class WatchfaceScraper {
                 }
               }
 
+              // Extract face ID from detail URL or image URL
+              let faceId = null;
+              if (detailUrl) {
+                const faceIdMatch = detailUrl.match(/\/face\/(\d+)/);
+                faceId = faceIdMatch ? faceIdMatch[1] : null;
+              } else if (imageUrl) {
+                const imageIdMatch = imageUrl.match(/watchfaces\/[^/]+\/(\d+)/);
+                faceId = imageIdMatch ? imageIdMatch[1] : null;
+                if (faceId) {
+                  detailUrl = `${siteUrl}/face/${faceId}`;
+                }
+              }
+
               // Only add if we have both name and image
               if (name && imageUrl) {
                 results.push({
@@ -186,7 +199,10 @@ class WatchfaceScraper {
                   tags: [],
                   metadata: {
                     sourceUrl: window.location.href,
-                    originalId: `watchface_textblock2_${Date.now()}_${index}`,
+                    originalId: faceId
+                      ? `face_${faceId}`
+                      : `watchface_textblock2_${Date.now()}_${index}`,
+                    faceId: faceId,
                     scrapedAt: new Date(),
                   },
                 });
@@ -235,7 +251,7 @@ class WatchfaceScraper {
                   } else {
                     // Look for other text elements
                     const textElements = parentContainer.querySelectorAll(
-                      'h1, h2, h3, h4, h5, .title, [class*="name"]'
+                      'h1, h2, h3, h4, h5, .title, [class*="name"], .heading-3'
                     );
                     for (const textEl of textElements) {
                       const text = textEl.textContent.trim();
@@ -265,6 +281,21 @@ class WatchfaceScraper {
                   }
                 }
 
+                // Extract face ID from detail URL or image URL
+                let faceId = null;
+                if (detailUrl) {
+                  const faceIdMatch = detailUrl.match(/\/face\/(\d+)/);
+                  faceId = faceIdMatch ? faceIdMatch[1] : null;
+                } else if (imageUrl) {
+                  const imageIdMatch = imageUrl.match(
+                    /watchfaces\/[^/]+\/(\d+)/
+                  );
+                  faceId = imageIdMatch ? imageIdMatch[1] : null;
+                  if (faceId) {
+                    detailUrl = `${siteUrl}/face/${faceId}`;
+                  }
+                }
+
                 results.push({
                   name: name.substring(0, 200),
                   description: "",
@@ -278,7 +309,10 @@ class WatchfaceScraper {
                   tags: [],
                   metadata: {
                     sourceUrl: window.location.href,
-                    originalId: `watchface_img_${Date.now()}_${index}`,
+                    originalId: faceId
+                      ? `face_${faceId}`
+                      : `watchface_img_${Date.now()}_${index}`,
+                    faceId: faceId,
                     scrapedAt: new Date(),
                   },
                 });
@@ -337,45 +371,48 @@ class WatchfaceScraper {
 
       const faceData = await this.page.evaluate((siteUrl) => {
         try {
-          // Extract detailed information from individual face page
-          const name =
-            document
-              .querySelector(
-                'h1, h2, .heading-3, [class*="title"], .text-block-2'
-              )
-              ?.textContent?.trim() || "";
+          // Extract detailed information from individual face page using specific selectors
 
-          const authorEl = document.querySelector(
-            '[class*="composed"] span, [class*="author"], [class*="creator"]'
-          );
-          const author =
-            authorEl?.textContent
-              ?.trim()
-              ?.replace(/^(composed by|by)\s*/i, "") || "";
+          // Get watchface name from heading-3 class
+          const nameEl = document.querySelector(".heading-3");
+          const name = nameEl?.textContent?.trim() || "";
 
-          const description =
-            document
-              .querySelector('p, .description, [class*="desc"]')
-              ?.textContent?.trim() || "";
+          // Get author from author_name class
+          const authorEl = document.querySelector(".author_name");
+          const author = authorEl?.textContent?.trim() || "";
 
+          // Get image URL from img tag (look for snapshot.png or other watchface images)
           const imageEl = document.querySelector(
-            'img[src*="watch"], img[alt*="watch"], img'
+            'img[src*="snapshot.png"], img[src*="watchfaces"], img[src*="assets.watchfacely.com"]'
           );
-          const imageUrl = imageEl
-            ? imageEl.src.startsWith("/")
-              ? siteUrl + imageEl.src
-              : imageEl.src
-            : "";
+          let imageUrl = "";
+          if (imageEl) {
+            imageUrl = imageEl.src;
+            // Ensure absolute URL
+            if (imageUrl.startsWith("/")) {
+              imageUrl = siteUrl + imageUrl;
+            }
+          }
 
-          // Look for app information
+          // Get description from common description areas
+          const descriptionEl = document.querySelector(
+            'p, .description, [class*="desc"], .text-block'
+          );
+          const description = descriptionEl?.textContent?.trim() || "";
+
+          // Look for app compatibility information
           const appsSection = document.querySelector(
-            '[class*="apps"], [class*="Apps"]'
+            '[class*="apps"], [class*="Apps"], [class*="compatibility"]'
           );
           const apps = appsSection
             ? Array.from(appsSection.querySelectorAll("*"))
                 .map((el) => el.textContent.trim())
                 .filter(Boolean)
             : [];
+
+          // Extract face ID from URL for better tracking
+          const faceIdMatch = window.location.href.match(/\/face\/(\d+)/);
+          const faceId = faceIdMatch ? faceIdMatch[1] : null;
 
           return {
             name: name.substring(0, 200),
@@ -391,7 +428,10 @@ class WatchfaceScraper {
             compatibility: apps,
             metadata: {
               sourceUrl: window.location.href,
-              originalId: `individual_${Date.now()}`,
+              originalId: faceId
+                ? `face_${faceId}`
+                : `individual_${Date.now()}`,
+              faceId: faceId,
               scrapedAt: new Date(),
             },
           };
