@@ -97,6 +97,8 @@ JWT_SECRET=your-secret-key
 ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
 ```
 
+For a complete list of all configuration options with detailed explanations, see **[ENV_TEMPLATE.md](ENV_TEMPLATE.md)**.
+
 ## 📚 API Documentation
 
 ### Base URL
@@ -341,18 +343,73 @@ The scraper extracts watchface data using specific CSS selectors:
 
 ## 🚀 Deployment
 
-The project includes a deployment script:
+The project includes a **secure** deployment script with comprehensive security measures:
 
 ```bash
-./deploy.sh
+./deploy.sh yourdomain.com
 ```
 
-For manual deployment:
+### 🔒 Security Features
 
-1. Set `NODE_ENV=production`
-2. Configure production MongoDB URI
-3. Set up reverse proxy (nginx)
-4. Use PM2 for process management
+- **HTTPS Enforced**: Automatic SSL certificate with Let's Encrypt
+- **Dedicated User**: Runs as non-root `watchface` user
+- **Firewall**: UFW configured with minimal open ports
+- **Fail2Ban**: Automatic IP blocking for failed attempts
+- **Rate Limiting**: API and request rate limiting via nginx
+- **Security Headers**: HSTS, CSP, XSS protection, and more
+- **File Permissions**: Proper 644/755/600 permissions
+- **Process Isolation**: Systemd security sandbox
+
+### Manual Deployment Steps
+
+For manual deployment with security:
+
+1. **Create dedicated user**:
+
+   ```bash
+   sudo adduser watchface
+   sudo usermod -aG sudo watchface
+   ```
+
+2. **Setup SSH keys**:
+
+   ```bash
+   ssh-copy-id -p 24700 watchface@your-server
+   ```
+
+3. **Run secure deployment**:
+
+   ```bash
+   ./deploy.sh yourdomain.com
+   ```
+
+4. **Verify security**:
+
+   ```bash
+   # Test HTTPS redirect
+   curl -I http://yourdomain.com
+
+   # Check security headers
+   curl -I https://yourdomain.com
+
+   # Verify SSL certificate
+   openssl s_client -connect yourdomain.com:443
+   ```
+
+For detailed security information, see [SECURITY.md](SECURITY.md).
+
+## 🔒 Security
+
+This project implements enterprise-grade security measures:
+
+- **🛡️ Server Hardening**: Firewall, fail2ban, secure SSH
+- **🔐 SSL/TLS**: HTTPS enforced with modern TLS protocols
+- **⚡ Rate Limiting**: API and request throttling
+- **🚫 Input Validation**: Prevention of injection attacks
+- **📊 Monitoring**: Comprehensive logging and health checks
+- **🔄 Auto-Updates**: SSL certificate auto-renewal
+
+See [SECURITY.md](SECURITY.md) for complete security documentation.
 
 ## 🐛 Troubleshooting
 
